@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import PopupForm from "./AddEditBrandForm"; // Popup for add/edit form
 import { getItems, deleteItem, createItem, updateItem, partialupdateItem } from "../../../ApiUtils.js"; // API calls
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,7 +13,7 @@ function BrandList() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [editData, setEditData] = useState(null); // Data for editing
   const [offset, setOffset] = useState(0); // Current offset for pagination
-  const [limit, setLimit] = useState(10); // Number of items per page
+  const [limit] = useState(10); // Number of items per page
   const [totalCount, setTotalCount] = useState(0); // Total number of items for pagination
   const [filterValues, setFilterValues] = useState('');
   const [display_name, setFilterDisplayName] = useState('');
@@ -21,13 +21,8 @@ function BrandList() {
   const [showFilters, setShowFilters] = useState(false);
   const { setIsLoading } = useLoading();
 
-  // Load items when component mounts
-  useEffect(() => {
-    loadItems(offset, offset + limit, filterValues);
-  }, [offset, limit, filterValues]);
-
   // Fetch all brands
-  const loadItems = async (offset, end, filters) => {
+  const loadItems = useCallback(async (offset, end, filters) => {
     setIsLoading(true);
     try{
       const response = await getItems('brand', { ...filters, offset, end });
@@ -39,8 +34,15 @@ function BrandList() {
     }
     finally{
       setIsLoading(false);
-    }
-  };
+    }    
+  }, [setIsLoading, setItems, setTotalCount]);
+
+  // Load items when component mounts
+  useEffect(() => {
+    loadItems(offset, offset + limit, filterValues);
+  }, [offset, limit, filterValues, loadItems]);
+
+
 
   // Handle delete operation
   const handleDelete = async (id) => {
