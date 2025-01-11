@@ -1,0 +1,23 @@
+.popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    color: #fff;
+    z-index: 1000;
+    animation: fade-in-out 3s;
+  }
+  .popup.success {
+    background-color: #4caf50;
+  }
+  .popup.error {
+    background-color: #f44336;
+  }
+  @keyframes fade-in-out {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  
