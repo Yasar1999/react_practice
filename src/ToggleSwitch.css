@@ -1,0 +1,37 @@
+:root {
+    --inactive-bg: #28292c; /* Background color when inactive */
+    --active-bg: #d8dbe0;   /* Background color when active */
+    --inactive-knob: #d8dbe0; /* Knob color when inactive */
+    --active-knob: #28292c;   /* Knob color when active */
+  }
+  
+  .toggle-switch {
+    position: relative;
+    width: 55px;
+    height: 25px;
+    background-color: var(--inactive-bg);
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .toggle-switch .slider {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background-color: var(--inactive-knob);
+    transition: transform 0.3s, background-color 0.3s;
+  }
+  
+  .toggle-switch.active {
+    background-color: var(--active-bg);
+  }
+  
+  .toggle-switch.active .slider {
+    transform: translateX(30px); /* Adjust for knob size */
+    background-color: var(--active-knob);
+  }
+  
