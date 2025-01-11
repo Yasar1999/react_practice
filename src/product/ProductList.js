@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 // import ProductForm from "./AddEditProductForm"; // Popup for add/edit form
-import { getItems, deleteItem, createItem, updateItem, partialupdateItem } from "../ApiUtils.js"; // API calls
+import { getItems, deleteItem, partialupdateItem } from "../ApiUtils.js"; // API calls
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { useLoading } from "../Loader";
 import { useNavigate, Link } from "react-router-dom"
 
 function ProductList() {
   const [items, setItems] = useState([]);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [editData, setEditData] = useState(null); // Data for editing
+  // const [isPopupOpen, setIsPopupOpen] = useState(false);
+  // const [editData, setEditData] = useState(null); // Data for editing
   const [offset, setOffset] = useState(0); // Current offset for pagination
-  const [limit, setLimit] = useState(10); // Number of items per page
+  const [limit] = useState(10); // Number of items per page
   const [totalCount, setTotalCount] = useState(0); // Total number of items for pagination
   const [filterValues, setFilterValues] = useState('');
   const [category, setSearchCategory] = useState('');
@@ -50,7 +50,7 @@ function ProductList() {
   useEffect(() => {
     fetchCategories();
     loadItems(offset, offset + limit, filterValues);
-  }, [offset, limit, filterValues]);
+  }, [offset, limit, filterValues, loadItems]);
   
 
   // Fetch all brands
@@ -81,19 +81,19 @@ function ProductList() {
   // };
 
   // Handle form submission (add/edit)
-  const handleSubmit = async (data) => {
-    setIsLoading(true);
-    if (editData) {
-      // Update operation
-      await updateItem('product', editData.id, data);
-    } else {
-      // Create operation
-      await createItem('product', data);
-    }
-    setIsPopupOpen(false); // Close the popup
-    loadItems(offset, offset + limit); // Refresh the list
-    setIsLoading(false);
-  };
+  // const handleSubmit = async (data) => {
+  //   setIsLoading(true);
+  //   if (editData) {
+  //     // Update operation
+  //     await updateItem('product', editData.id, data);
+  //   } else {
+  //     // Create operation
+  //     await createItem('product', data);
+  //   }
+  //   setIsPopupOpen(false); // Close the popup
+  //   loadItems(offset, offset + limit); // Refresh the list
+  //   setIsLoading(false);
+  // };
 
    // Handle page change
    const handlePageChange = (newOffset) => {
