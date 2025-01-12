@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from "react";
-import { getItems, createItem } from "../ApiUtils"
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { getItems, createItem, updateItem } from "../ApiUtils"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash, faXmarkSquare } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { useLoading } from "../Loader";
 
 function ProductForm({setApiResponse}) {
   const [brands, setBrands] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const editData = useMemo(() => location.state?.editData || {}, [location.state]);
   const { setIsLoading } = useLoading();
   const [category, setCategory] = useState('');
   const [categories, setCategories] = useState([]);
   const [sizes, setSizes] = useState([]);
+  const [isDisabled, setIsDisabled] = useState(false);
   const [errors, setErrors] = useState({});
   const [selectedSizes, setSelectedSizes] = useState({});
   const [formData, setFormData] = useState({
@@ -47,6 +50,10 @@ function ProductForm({setApiResponse}) {
       }
       if (!cat.min_price || cat.min_price <= 0) {
         newErrors[`min_price_${catIndex}`] = "Min Price is required and must be greater than 0";
+      }
+      if (!cat[`a_${catIndex}`])
+      {
+        newErrors[`a_${catIndex}`] = "Product image is required";
       }
       cat.colors.forEach((color, colorIndex) => {
         if (!color.color) {
@@ -159,24 +166,58 @@ function ProductForm({setApiResponse}) {
       }
     };
 
-  // Initialize form with editData or reset for adding
+  const fetchSize = useCallback(async () => {
+    try {
+      const response = await getItems('size', { 'category__id': category });
+      setSizes(response.data.records);
+      setMaxCategories(response.data.totalRecords);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  }, [category]);
+  
+
   useEffect(() => {
     fetchBrands();
     fetchCategories();
-    if (category){
-      const fetchSize = async () => {
-        try {
-          const response = await getItems('size', {'category__id': category});
-          setSizes(response.data.records); // Store categories in state
-          setMaxCategories(response.data.totalRecords)
-        } catch (error) {
-          console.error("Error fetching categories:", error);
-        }
-      };
+  }, []);
+  
+  useEffect(() => {
+    if (category) {
       fetchSize();
     }
-  }, [category]);
+  }, [category, fetchSize]);
+    
 
+  // Initialize form with editData or reset for adding
+  useEffect(() => {
+    if (editData) {
+      setIsDisabled(true);
+      setCategory(editData.category);
+      const updatedFormData = {
+        brand: editData.brand || '',
+        categories: [
+          {
+            size: editData.size || '',
+            min_price: editData.min_price || '',
+            photo_key: 'a_0',
+            a_0: editData.image,
+            colors: editData.product_colors,
+          },
+        ]
+      };
+      const initialUrlMap = updatedFormData.categories.reduce((acc, category, index) => {
+        if (category.a_0) {
+          acc[`preview_${index}`] = category.a_0;  // Use existing image URL
+        }
+        return acc;
+      }, {});
+      
+      setUrlMap(initialUrlMap);  // Set initial preview URLs
+      setFormData(updatedFormData);
+    }
+  }, [editData]);
+  
   const [urlMap, setUrlMap] = useState({}); // Global or component-level map to store URLs by category index
 
   const handleFileChange = (categoryIndex, file) => {
@@ -187,18 +228,14 @@ function ProductForm({setApiResponse}) {
     }
   
     if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setUrlMap((prevUrlMap) => ({
-        ...prevUrlMap,
-        [`preview_${categoryIndex}`]: previewUrl,
-      }));
+      const previewUrl = file ? URL.createObjectURL(file) : newCategories[categoryIndex].a_0;
+      setUrlMap((prev) => ({ ...prev, [`preview_${categoryIndex}`]: previewUrl }));
+      
       newCategories[categoryIndex][`a_${categoryIndex}`] = file;
     }
   
     setFormData({ ...formData, categories: newCategories });
   };
-  
-
   
   const handleSizeChange = (categoryIndex, sizeId) => {
     setSelectedSizes((prev) => ({ ...prev, [categoryIndex]: sizeId }));
@@ -220,7 +257,6 @@ function ProductForm({setApiResponse}) {
     try{
       const formDataToSend = new FormData();
 
-      // Add the 'data' as a stringified JSON object
       formDataToSend.append('data', JSON.stringify({
         brand: formData.brand,
         categories: formData.categories.map((category, index) => ({
@@ -230,6 +266,8 @@ function ProductForm({setApiResponse}) {
           colors: category.colors
         }))
       }));
+      // }
+      
 
       // Loop through categories and add the corresponding files
       formData.categories.forEach((category, index) => {
@@ -239,10 +277,19 @@ function ProductForm({setApiResponse}) {
           formDataToSend.append(fileKey, file);
         }
       });
-      const response = await createItem('product', formDataToSend, { 'Content-Type': 'multipart/form-data' });
-      if (response.status === 201){
-        setApiResponse(response)
-        navigate('/product')
+      if (editData){
+        const response = await updateItem('product', editData.id, formDataToSend, { 'Content-Type': 'multipart/form-data' });
+        if (response.status === 200){
+          setApiResponse(response)
+          navigate('/product')
+        }
+      }
+      else {
+        const response = await createItem('product', formDataToSend, { 'Content-Type': 'multipart/form-data' });
+        if (response.status === 201){
+          setApiResponse(response)
+          navigate('/product')
+        }
       }
     }
     catch(error){
@@ -268,6 +315,11 @@ function ProductForm({setApiResponse}) {
   return (
     <div className="row px-2 col-12 product-container">
       <form className="common-form" onSubmit={handleSubmit}>
+      <div className="row mt-2">
+          <div className="col-12">
+            <h3>{editData ? "Edit Product" : "Add Product"}</h3>
+          </div>
+        </div>
         <div className="row mt-2">
           <div className="col-12">
             <h4>Product Information</h4>
@@ -283,6 +335,7 @@ function ProductForm({setApiResponse}) {
                 value={formData.brand}
                 onChange={(e) => handleInputChange(null, null, 'brand', Number(e.target.value))}
                 required
+                disabled={isDisabled}
               >
                 <option value="" disabled>
                   Select a Brand
@@ -304,6 +357,8 @@ function ProductForm({setApiResponse}) {
                 name="category"
                 value={category}
                 onChange={(e) => handleCategoryCheck(e)}
+                required
+                disabled={isDisabled}
               >
                 <option value="" disabled>
                   Select a category
@@ -325,9 +380,9 @@ function ProductForm({setApiResponse}) {
         <h6 className="header-list">
           <div className="header-left">Size Chart
           </div>
-          <div className="header-right">
+          {!editData && (<div className="header-right">
             <button className="add-category-button" onClick={addCategory}>➕ Add Category</button>
-          </div>
+          </div>)}
         </h6>
         </div>
         {formData.categories.map((category, catIndex) => (
@@ -341,6 +396,7 @@ function ProductForm({setApiResponse}) {
                 value={category.size || ''}
                 onChange={(e) => handleSizeChange(catIndex, Number(e.target.value))}
                 required
+                disabled={isDisabled}
               >
               <option value="" disabled>Select a Size</option>
                 {getAvailableSizes(category.size).map((size) => (
@@ -373,10 +429,12 @@ function ProductForm({setApiResponse}) {
               name={`productpic_${catIndex}`}
               type="file"
               accept="image/*"
-              required
               onChange={(e) => handleFileChange(catIndex, e.target.files[0], e)}
               style={{ border: '1px solid #ccc', padding: '5px' }}
             />
+            {errors[`a_${catIndex}`] && (
+              <small className="error-message">{`a_${catIndex}`}</small>
+            )}
             </div>
             {urlMap[`preview_${catIndex}`] && (
               <div className="form-group col-lg-2 d-flex justify-content-center align-items-center">
@@ -398,11 +456,11 @@ function ProductForm({setApiResponse}) {
                 </div>
               </div>
             )}
-            <div className="form-group col-lg-1 col-md-1 d-flex justify-content-center align-items-center pt-3">
+            {catIndex !== 0 && (<div className="form-group col-lg-1 col-md-1 d-flex justify-content-center align-items-center pt-3">
               <span onClick={() => removeCategory(catIndex)} style={{ cursor: 'pointer' }}>
                 <FontAwesomeIcon icon={faTrash} color="black" />
               </span>
-            </div>
+            </div>)}
           </div>
           <div className="row">
             <h6 className="header-list">
@@ -456,11 +514,11 @@ function ProductForm({setApiResponse}) {
                     <small className="error-message">{errors[`quantity_${catIndex}_${colorIndex}`]}</small>
                   )}
               </div>
-              <div className="form-group col-lg-2 col-md-2 d-flex justify-content-center align-items-center pt-3">
-              <span onClick={() => removeColor(catIndex, colorIndex)} style={{ cursor: 'pointer' }}>
-                <FontAwesomeIcon icon={faTrash} color="black" />
-              </span>
-            </div>
+              {colorIndex !== 0 && (<div className="form-group col-lg-2 col-md-2 d-flex justify-content-center align-items-center pt-3">
+                <span onClick={() => removeColor(catIndex, colorIndex)} style={{ cursor: 'pointer' }}>
+                  <FontAwesomeIcon icon={faTrash} color="black" />
+                </span>
+              </div>)}
             </div>
           ))}
         </div>

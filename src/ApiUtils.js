@@ -1,50 +1,35 @@
-import axios from 'axios';
+import api from  "./CustomApi"
 
-const BASE_URL = 'http://127.0.0.1:8000/api'; // Base URL for the API
-
-// Function to retrieve token from localStorage
-const getAuthToken = () => localStorage.getItem('access');
 
 // Dynamic API helper functions with Authorization header
 export const getItems = (resource, params = {}) => 
-  axios.get(`${BASE_URL}/${resource}/`, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,  // Only include the Authorization header if token exists
-    },
-    params: params,
-  });
+  api.get(`/api/${resource}/`, { params });
 
-export const getItem = (resource, id) => 
-  axios.get(`${BASE_URL}/${resource}/${id}/`, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,
-    }
-  });
 
 export const createItem = (resource, data, headers = {}) => {
-  const response = axios.post(`${BASE_URL}/${resource}/`, data, {
-    headers: {Authorization: `Bearer ${getAuthToken()}`, ...headers }
+  return api.post(`/api/${resource}/`, data, {
+    headers: {
+      ...headers,  // Spread additional headers here
+    },
   });
-  return response;
 };
 
 export const updateItem = (resource, id, data, headers = {} ) => {
-  const response = axios.put(`${BASE_URL}/${resource}/${id}/`, data, {
-    headers: {Authorization: `Bearer ${getAuthToken()}`, ...headers }
+  return api.put(`/api/${resource}/${id}/`, data, {
+    headers: {
+      ...headers,  // Spread additional headers here
+    },
   });
-  return response;
 };
 
-export const partialupdateItem = (resource, id, data) => 
-  axios.patch(`${BASE_URL}/${resource}/${id}/`, data, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,
-    }
-  });
+export const partialupdateItem = (resource, id, data) => {
+  return api.patch(`/api/${resource}/${id}/`, data);
+};
 
-export const deleteItem = (resource, id) => 
-  axios.delete(`${BASE_URL}/${resource}/${id}/`, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,
-    }
-  });
+export const deleteItem = (resource, id) => {
+  return api.delete(`/api/${resource}/${id}/`);
+};
+
+export const getItem = (resource, id) => {
+  return api.get(`/api/${resource}/${id}/`);
+};

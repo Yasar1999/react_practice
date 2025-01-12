@@ -1,16 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-// import ProductForm from "./AddEditProductForm"; // Popup for add/edit form
 import { getItems, deleteItem, partialupdateItem } from "../ApiUtils.js"; // API calls
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
+import { faEdit, faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip as ReactTooltip } from 'react-tooltip';
 import { useLoading } from "../Loader";
 import { useNavigate, Link } from "react-router-dom"
 
-function ProductList() {
+function ProductList({setApiResponse}) {
   const [items, setItems] = useState([]);
-  // const [isPopupOpen, setIsPopupOpen] = useState(false);
-  // const [editData, setEditData] = useState(null); // Data for editing
   const [offset, setOffset] = useState(0); // Current offset for pagination
   const [limit] = useState(10); // Number of items per page
   const [totalCount, setTotalCount] = useState(0); // Total number of items for pagination
@@ -45,55 +42,35 @@ function ProductList() {
     } finally {
       setIsLoading(false);
     }
-  }, [setIsLoading, setItems, setTotalCount]);
+  }, [setIsLoading]);
   
   useEffect(() => {
     fetchCategories();
+  }, []);  // Only call fetchCategories once on mount
+  
+  useEffect(() => {
     loadItems(offset, offset + limit, filterValues);
   }, [offset, limit, filterValues, loadItems]);
   
 
-  // Fetch all brands
-  // const loadItems = async (offset, end, filter) => {
-  //   setIsLoading(true);
-  //   try {
-  //     const response = await getItems('product', { ...filter, offset, end });
-  //     setItems(response.data.records);
-  //     setTotalCount(response.data.totalRecords);
-  //   } catch (error) {
-  //     console.error("Error loading items:", error);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };  
-  
-
   // Handle delete operation
   const handleDelete = async (id) => {
-    await deleteItem('product', id);
-    loadItems(offset, offset + limit); // Refresh items after deletion
+    try{
+      const response = await deleteItem('product', id);
+      setApiResponse(response)
+      loadItems(offset, offset + limit); // Refresh items after deletion
+    }
+    catch(error){
+      setApiResponse(error.response)
+    }
   };
 
-  // Handle mo
-  // const handleOpen = (data = null) => {
-  //   setEditData(data); // Pass data if editing, null if creating
-  //   setIsPopupOpen(true);
-  // };
+  // Handle edit
+  const handleEditChange = (data = null) => {
+    // setEditData(data); // Pass data if editing, null if creating
+    navigate(`/product/edit/${data.id}`, { state: { editData: data } });
+  };
 
-  // Handle form submission (add/edit)
-  // const handleSubmit = async (data) => {
-  //   setIsLoading(true);
-  //   if (editData) {
-  //     // Update operation
-  //     await updateItem('product', editData.id, data);
-  //   } else {
-  //     // Create operation
-  //     await createItem('product', data);
-  //   }
-  //   setIsPopupOpen(false); // Close the popup
-  //   loadItems(offset, offset + limit); // Refresh the list
-  //   setIsLoading(false);
-  // };
 
    // Handle page change
    const handlePageChange = (newOffset) => {
@@ -133,15 +110,11 @@ function ProductList() {
     
     try {
       // Send PATCH request to update the item
-      setIsLoading(true);
-      await partialupdateItem('product', id, { is_active: !updatedItem.is_active });
-      
+      const response = await partialupdateItem('product', id, { is_active: !updatedItem.is_active });
+      setApiResponse(response)
       loadItems(offset, offset + limit);
     } catch (error) {
-      console.error("Error updating status:", error);
-    }
-    finally{
-        setIsLoading(false);
+      setApiResponse(error.response)
     }
   };
 
@@ -221,7 +194,8 @@ function ProductList() {
             <th>Brand</th>
             <th>Category</th>
             <th>Size</th>
-            <th>Price</th>
+            <th>Min Price</th>
+            <th>Max Price</th>
             <th>Created By</th>
             <th>Modified By</th>
             <th>Created On</th>
@@ -239,9 +213,10 @@ function ProductList() {
                 {item.product_code}
                 </Link>
               </td>
-              <td>{item.brand_detail.display_name}</td>
-              <td>{item.size_details.category_detail.display_name}</td>
-              <td>{item.size_details.size}</td>
+              <td>{item.brand_name}</td>
+              <td>{item.category_name}</td>
+              <td>{item.size_value}</td>
+              <td>{item.min_price}</td>
               <td>{item.max_price}</td>
               <td>{item.created_by}</td>
               <td>{item.last_updated_by}</td>
@@ -254,13 +229,13 @@ function ProductList() {
                 <ReactTooltip id='status-tooltip'/>        
               </td>
               <td>
-                {/* <span
-                  onClick={() => handleOpenPopup(item)}
+                <span
+                  onClick={() => handleEditChange(item)}
                   style={{ cursor: 'pointer', marginRight: '10px' }}
                   data-tooltip-content={'edit'} data-tooltip-float data-tooltip-id='edit-tooltip'>
                   <FontAwesomeIcon icon={faEdit} />
                 <ReactTooltip id='edit-tooltip'/> 
-                </span> */}
+                </span>
                 <span
                   onClick={() => handleDelete(item.id)}
                   style={{ cursor: 'pointer' }} data-tooltip-content={'delete'} data-tooltip-float data-tooltip-id='delete-tooltip'
@@ -288,15 +263,6 @@ function ProductList() {
           </span>
         ))}
       </div>
-      {/* Popup Form for Add/Edit */}
-      {/* {isPopupOpen && (
-        <ProductForm
-          isOpen={isPopupOpen}
-          onClose={() => setIsPopupOpen(false)}
-          onSubmit={handleSubmit}
-          editData={editData} // Pass data for editing, null for adding
-        />
-      )} */}
     </div>
   );
 }
